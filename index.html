@@ -14,12 +14,7 @@
   *{box-sizing:border-box}
   body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f172a;color:#0f172a}
   .wrap{max-width:1000px;margin:0 auto;padding:24px 16px 32px}
-  .top{background:#fff;border-radius:16px;padding:20px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
-  .top h1{margin:0;font-size:26px;line-height:1.1}
-  .top p{margin:6px 0 0;color:#64748b;font-size:13px}
-  .badge{background:#dcfce7;color:#166534;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
-  .badge.red{background:#fee2e2;color:#991b1b}
-  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:14px 0}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:0 0 14px}
   .card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
   .card small{color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
   .card b{display:block;font-size:34px;line-height:1.1;margin-top:6px}
@@ -44,9 +39,6 @@
   .debug{padding:12px 22px;color:#64748b;font-size:11px;word-break:break-word;border-top:1px solid #eef2f7}
   @media(max-width:640px){
     .wrap{padding:12px 10px 20px}
-    .top{flex-direction:column;align-items:flex-start;padding:16px}
-    .top h1{font-size:22px}
-    .badge{align-self:flex-start}
     .cards{grid-template-columns:repeat(2,1fr);gap:10px}
     .card{padding:14px}
     .card b{font-size:28px}
@@ -61,10 +53,6 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
-    <div><h1>Dashboard - Servidores</h1><p>Atualizado a cada 5 min &bull; Última verificação: <b id="ultima">carregando...</b></p></div>
-    <span class="badge" id="badgeTop">● CARREGANDO</span>
-  </div>
   <div class="cards">
     <div class="card"><small>Online</small><b id="online" style="color:#16a34a">-</b><span>Respondendo agora</span></div>
     <div class="card"><small>Offline</small><b id="offline" style="color:#dc2626">-</b><span id="txtOffline">Nenhuma falha</span></div>
@@ -93,11 +81,7 @@ function mostrar(dados){
   document.getElementById('online').textContent = online;
   document.getElementById('offline').textContent = offline;
   document.getElementById('txtOffline').textContent = offline === 0 ? 'Nenhuma falha' : offline + ' com falha';
-  document.getElementById('ultima').textContent = new Date().toLocaleString('pt-BR');
   document.getElementById('sub').textContent = total + ' servidores • 4 colunas';
-  const badge = document.getElementById('badgeTop');
-  if(offline>0){ badge.textContent = '● ' + offline + ' OFFLINE'; badge.classList.add('red'); }
-  else { badge.textContent = '● TUDO ONLINE'; badge.classList.remove('red'); }
   let html = '<table><thead><tr><th class="col-tipo">Tipo</th><th>Nome</th><th class="col-ip">IP</th><th>Status</th></tr></thead><tbody>';
   dados.forEach(d=>{
     const s = d.status.toUpperCase();
@@ -133,8 +117,6 @@ async function carregar(){
       mostrar(dados);
     }catch(e2){
       document.getElementById('tabela').innerHTML = '<div class="erro"><b>Erro ao carregar</b><br>Direto: ' + e1.message + '<br>Proxy: ' + e2.message + '<br><br>Confira: Arquivo > Compartilhar > Publicar na Web > aba Dashboard > CSV > Publicar</div>';
-      document.getElementById('badgeTop').textContent = '● ERRO AO CARREGAR';
-      document.getElementById('badgeTop').classList.add('red');
       debug.textContent = 'Falhou nos 2 caminhos';
     }
   }

@@ -1,4 +1,4 @@
-const CACHE = 'dashboard-servidores-v2';
+const CACHE = 'dashboard-servidores-v3';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./index.html','./manifest.json'])));
 });

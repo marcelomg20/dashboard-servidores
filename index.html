@@ -77,7 +77,7 @@
 // >>> TROQUE AQUI PELO LINK CSV PUBLICADO DA SUA PLANILHA <<<
 // Na planilha: Arquivo > Compartilhar > Publicar na Web > aba Dashboard > CSV > Publicar > copie o link
 // Exemplo: https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=XXXX&single=true&output=csv
-const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEwz5huwO-Na0cbqkcKOP7TobOahY1i1YOXBzGz5UVEccN51CUoi7wDJmEXAiOMoaPN5omjA_kpeGU/pub?gid=828747722&single=true&output=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEwz5huwO-Na0cbqkcKOP7TobOahY1i1YOXBzGz5UVEccN51CUoi7wDJmEXAiOMoaPN5omjA_kpeGU/pub?output=csv";
 
 function encurtarTipo(t){ t=String(t).toUpperCase(); if(t.includes('SERVIDOR')) return 'SERV'; if(t==='PC'||t.includes('PC')) return 'PC'; return t; }
 function parseCSV(text){

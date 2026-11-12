@@ -40,6 +40,8 @@
   .pill.yellow .dot{background:#eab308}
   .foot{color:#cbd5e1;text-align:center;font-size:12px;margin-top:12px}
   .loading{padding:30px;text-align:center;color:#64748b}
+  .erro{padding:20px;text-align:center;color:#991b1b;font-size:13px;line-height:1.6;word-break:break-word}
+  .debug{padding:12px 22px;color:#64748b;font-size:11px;word-break:break-word;border-top:1px solid #eef2f7}
   @media(max-width:640px){
     .wrap{padding:12px 10px 20px}
     .top{flex-direction:column;align-items:flex-start;padding:16px}
@@ -70,41 +72,76 @@
   <div class="panel">
     <div class="panel-head"><h2>Status dos servidores</h2><span id="sub">-</span></div>
     <div id="tabela"><div class="loading">Carregando dados da planilha...</div></div>
+    <div id="debug" class="debug"></div>
   </div>
   <div class="foot">Monitoramento da Rede &bull; Atualiza sozinho a cada 5 minutos</div>
 </div>
 <script>
-// >>> TROQUE AQUI PELO LINK CSV PUBLICADO DA SUA PLANILHA <<<
-// Na planilha: Arquivo > Compartilhar > Publicar na Web > aba Dashboard > CSV > Publicar > copie o link
-// Exemplo: https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=XXXX&single=true&output=csv
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQEwz5huwO-Na0cbqkcKOP7TobOahY1i1YOXBzGz5UVEccN51CUoi7wDJmEXAiOMoaPN5omjA_kpeGU/pub?gid=828747722&single=true&output=csv";
-
 function encurtarTipo(t){ t=String(t).toUpperCase(); if(t.includes('SERVIDOR')) return 'SERV'; if(t==='PC'||t.includes('PC')) return 'PC'; return t; }
 function parseCSV(text){
   const linhas = text.trim().split(/\r?\n/).slice(1).filter(l=>l.trim());
   return linhas.map(l=>{
-    // CSV simples: Tipo,Nome,IP,Status (sem virgulas dentro dos campos)
     const p = l.split(',').map(s=>s.replace(/^"|"$/g,'').trim());
     return {tipo:p[0]||'', nome:p[1]||'', ip:p[2]||'', status:p[3]||''};
   }).filter(d=>d.nome);
 }
+function mostrar(dados){
+  const total = dados.length;
+  const online = dados.filter(d=>d.status.toUpperCase().includes('ONLINE') && !d.status.toUpperCase().includes('OFF')).length;
+  const offline = dados.filter(d=>d.status.toUpperCase().includes('OFFLINE')).length;
+  document.getElementById('online').textContent = online;
+  document.getElementById('offline').textContent = offline;
+  document.getElementById('txtOffline').textContent = offline === 0 ? 'Nenhuma falha' : offline + ' com falha';
+  document.getElementById('ultima').textContent = new Date().toLocaleString('pt-BR');
+  document.getElementById('sub').textContent = total + ' servidores • 4 colunas';
+  const badge = document.getElementById('badgeTop');
+  if(offline>0){ badge.textContent = '● ' + offline + ' OFFLINE'; badge.classList.add('red'); }
+  else { badge.textContent = '● TUDO ONLINE'; badge.classList.remove('red'); }
+  let html = '<table><thead><tr><th class="col-tipo">Tipo</th><th>Nome</th><th class="col-ip">IP</th><th>Status</th></tr></thead><tbody>';
+  dados.forEach(d=>{
+    const s = d.status.toUpperCase();
+    let cls='pill', txt='ONLINE';
+    if(s.includes('OFFLINE')){ cls+=' red'; txt='OFFLINE'; }
+    else if(s.includes('LENTO')){ cls+=' yellow'; txt='LENTO'; }
+    html += '<tr><td class="col-tipo">'+encurtarTipo(d.tipo)+'</td><td class="nome">'+d.nome+'</td><td class="col-ip">'+d.ip+'</td><td><span class="'+cls+'"><span class="dot"></span>'+txt+'</span></td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('tabela').innerHTML = html;
+}
+async function tentar(url){
+  const res = await fetch(url, {cache:'no-store'});
+  if(!res.ok) throw new Error('HTTP ' + res.status + ' em ' + url);
+  const text = await res.text();
+  if(text.trim().startsWith('<')) throw new Error('Retornou HTML em vez de CSV');
+  const dados = parseCSV(text);
+  if(!dados.length) throw new Error('CSV veio vazio / formato diferente. Inicio: ' + text.slice(0,120));
+  return dados;
+}
 async function carregar(){
+  const debug = document.getElementById('debug');
   try{
-    const res = await fetch(CSV_URL + (CSV_URL.includes('?') ? '&' : '?') + 't=' + Date.now());
-    const text = await res.text();
-    const dados = parseCSV(text);
-    const total = dados.length;
-    const online = dados.filter(d=>d.status.toUpperCase().includes('ONLINE') && !d.status.toUpperCase().includes('OFF')).length;
-    const offline = dados.filter(d=>d.status.toUpperCase().includes('OFFLINE')).length;
-    const disp = total ? Math.round(online/total*100) : 0;
-    // total nao exibido mais - so ONLINE / OFFLINE
-    document.getElementById('online').textContent = online;
-    document.getElementById('offline').textContent = offline;
-    // disponibilidade nao exibida mais
-    document.getElementById('txtOffline').textContent = offline === 0 ? 'Nenhuma falha' : offline + ' com falha';
-    document.getElementById('ultima').textContent = new Date().toLocaleString('pt-BR');
-    document.getElementById('sub').textContent = total + ' servidores • 4 colunas';
-    const badge = document.getElementById('badgeTop');
-    if(offline>0){ badge.textContent = '● ' + offline + ' OFFLINE'; badge.classList.add('red'); }
-    else { badge.textContent = '● TUDO ONLINE'; badge.classList.remove('red'); }
-    let html = '<table><thead><tr><th class="col-tipo">Tipo</th><th>Nome</th><th class="col-ip">IP</th><th>Status</th></tr></thead
+    debug.textContent = 'Tentando direto...';
+    const dados = await tentar(CSV_URL + '&t=' + Date.now());
+    debug.textContent = 'OK direto • ' + dados.length + ' linhas';
+    mostrar(dados);
+  }catch(e1){
+    debug.textContent = 'Direto falhou: ' + e1.message + ' • Tentando via proxy...';
+    try{
+      const dados = await tentar('https://api.allorigins.win/raw?url=' + encodeURIComponent(CSV_URL + '&t=' + Date.now()));
+      debug.textContent = 'OK via proxy • ' + dados.length + ' linhas';
+      mostrar(dados);
+    }catch(e2){
+      document.getElementById('tabela').innerHTML = '<div class="erro"><b>Erro ao carregar</b><br>Direto: ' + e1.message + '<br>Proxy: ' + e2.message + '<br><br>Confira: Arquivo > Compartilhar > Publicar na Web > aba Dashboard > CSV > Publicar</div>';
+      document.getElementById('badgeTop').textContent = '● ERRO AO CARREGAR';
+      document.getElementById('badgeTop').classList.add('red');
+      debug.textContent = 'Falhou nos 2 caminhos';
+    }
+  }
+}
+carregar();
+setInterval(carregar, 300000);
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js'); }
+</script>
+</body>
+</html>

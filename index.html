@@ -19,7 +19,7 @@
   .top p{margin:6px 0 0;color:#64748b;font-size:13px}
   .badge{background:#dcfce7;color:#166534;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
   .badge.red{background:#fee2e2;color:#991b1b}
-  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin:14px 0}
   .card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
   .card small{color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
   .card b{display:block;font-size:34px;line-height:1.1;margin-top:6px}
@@ -64,10 +64,8 @@
     <span class="badge" id="badgeTop">● CARREGANDO</span>
   </div>
   <div class="cards">
-    <div class="card"><small>Monitorados</small><b id="total">-</b><span>Todos os servidores</span></div>
     <div class="card"><small>Online</small><b id="online" style="color:#16a34a">-</b><span>Respondendo agora</span></div>
-    <div class="card"><small>Offline</small><b id="offline" style="color:#dc2626">-</b><span>Nenhuma falha</span></div>
-    <div class="card"><small>Disponibilidade</small><b id="disp">-</b><span id="dispTxt">-</span></div>
+    <div class="card"><small>Offline</small><b id="offline" style="color:#dc2626">-</b><span id="txtOffline">Nenhuma falha</span></div>
   </div>
   <div class="panel">
     <div class="panel-head"><h2>Status dos servidores</h2><span id="sub">-</span></div>
@@ -99,33 +97,14 @@ async function carregar(){
     const online = dados.filter(d=>d.status.toUpperCase().includes('ONLINE') && !d.status.toUpperCase().includes('OFF')).length;
     const offline = dados.filter(d=>d.status.toUpperCase().includes('OFFLINE')).length;
     const disp = total ? Math.round(online/total*100) : 0;
-    document.getElementById('total').textContent = total;
+    // total nao exibido mais - so ONLINE / OFFLINE
     document.getElementById('online').textContent = online;
     document.getElementById('offline').textContent = offline;
-    document.getElementById('disp').textContent = disp + '%';
-    document.getElementById('dispTxt').textContent = online + ' de ' + total + ' servidores';
+    // disponibilidade nao exibida mais
+    document.getElementById('txtOffline').textContent = offline === 0 ? 'Nenhuma falha' : offline + ' com falha';
     document.getElementById('ultima').textContent = new Date().toLocaleString('pt-BR');
     document.getElementById('sub').textContent = total + ' servidores • 4 colunas';
     const badge = document.getElementById('badgeTop');
     if(offline>0){ badge.textContent = '● ' + offline + ' OFFLINE'; badge.classList.add('red'); }
     else { badge.textContent = '● TUDO ONLINE'; badge.classList.remove('red'); }
-    let html = '<table><thead><tr><th class="col-tipo">Tipo</th><th>Nome</th><th class="col-ip">IP</th><th>Status</th></tr></thead><tbody>';
-    dados.forEach(d=>{
-      const s = d.status.toUpperCase();
-      let cls='pill', txt='ONLINE';
-      if(s.includes('OFFLINE')){ cls+=' red'; txt='OFFLINE'; }
-      else if(s.includes('LENTO')){ cls+=' yellow'; txt='LENTO'; }
-      html += '<tr><td class="col-tipo">'+encurtarTipo(d.tipo)+'</td><td class="nome">'+d.nome+'</td><td class="col-ip">'+d.ip+'</td><td><span class="'+cls+'"><span class="dot"></span>'+txt+'</span></td></tr>';
-    });
-    html += '</tbody></table>';
-    document.getElementById('tabela').innerHTML = html;
-  }catch(e){
-    document.getElementById('tabela').innerHTML = '<div class="loading">Erro ao carregar. Verifique o CSV_URL no código. Detalhe: '+e+'</div>';
-  }
-}
-carregar();
-setInterval(carregar, 300000);
-if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js'); }
-</script>
-</body>
-</html>
+    let html = '<table><thead><tr><th class="col-tipo">Tipo</th><th>Nome</th><th class="col-ip">IP</th><th>Status</th></tr></thead

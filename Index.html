@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard - Servidores</title>
+<meta name="theme-color" content="#0f172a">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#0f172a;color:#0f172a}
+  .wrap{max-width:1000px;margin:0 auto;padding:24px 16px 32px}
+  .top{background:#fff;border-radius:16px;padding:20px 22px;display:flex;justify-content:space-between;align-items:center;gap:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .top h1{margin:0;font-size:26px;line-height:1.1}
+  .top p{margin:6px 0 0;color:#64748b;font-size:13px}
+  .badge{background:#dcfce7;color:#166534;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}
+  .badge.red{background:#fee2e2;color:#991b1b}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
+  .card{background:#fff;border-radius:14px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+  .card small{color:#64748b;font-size:12px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+  .card b{display:block;font-size:34px;line-height:1.1;margin-top:6px}
+  .card span{color:#64748b;font-size:12px}
+  .panel{background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  .panel-head{padding:18px 22px 6px;display:flex;justify-content:space-between;align-items:center}
+  .panel-head h2{margin:0;font-size:20px}
+  .panel-head span{color:#64748b;font-size:12px}
+  table{width:100%;border-collapse:collapse}
+  th{background:#eef6f1;text-align:left;padding:12px 22px;font-size:11px;letter-spacing:.08em;color:#475569;text-transform:uppercase}
+  td{padding:14px 22px;border-top:1px solid #eef2f7;font-size:14px}
+  td.nome{font-weight:700}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:#dcfce7;color:#166534;padding:6px 11px;border-radius:999px;font-size:12px;font-weight:700}
+  .pill.red{background:#fee2e2;color:#991b1b}
+  .pill.yellow{background:#fef9c3;color:#854d0e}
+  .dot{width:9px;height:9px;border-radius:50%;background:#22c55e;display:inline-block}
+  .pill.red .dot{background:#ef4444}
+  .pill.yellow .dot{background:#eab308}
+  .foot{color:#cbd5e1;text-align:center;font-size:12px;margin-top:12px}
+  .loading{padding:30px;text-align:center;color:#64748b}
+  @media(max-width:640px){
+    .wrap{padding:12px 10px 20px}
+    .top{flex-direction:column;align-items:flex-start;padding:16px}
+    .top h1{font-size:22px}
+    .badge{align-self:flex-start}
+    .cards{grid-template-columns:repeat(2,1fr);gap:10px}
+    .card{padding:14px}
+    .card b{font-size:28px}
+    .panel-head{padding:14px 14px 4px}
+    .panel-head h2{font-size:17px}
+    th, td{padding:12px 8px;font-size:13px}
+    td.col-tipo{font-size:10px;color:#64748b;padding:12px 4px}
+    td.col-ip{font-size:12px;color:#475569}
+    .pill{padding:5px 9px;font-size:11px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><h1>Dashboard - Servidores</h1><p>Atualizado a cada 5 min &bull; Última verificação: <b id="ultima">carregando...</b></p></div>
+    <span class="badge" id="badgeTop">● CARREGANDO</span>
+  </div>
+  <div class="cards">
+    <div class="card"><small>Monitorados</small><b id="total">-</b><span>Todos os servidores</span></div>
+    <div class="card"><small>Online</small><b id="online" style="color:#16a34a">-</b><span>Respondendo agora</span></div>
+    <div class="card"><small>Offline</small><b id="offline" style="color:#dc2626">-</b><span>Nenhuma falha</span></div>
+    <div class="card"><small>Disponibilidade</small><b id="disp">-</b><span id="dispTxt">-</span></div>
+  </div>
+  <div class="panel">
+    <div class="panel-head"><h2>Status dos servidores</h2><span id="sub">-</span></div>
+    <div id="tabela"><div class="loading">Carregando dados da planilha...</div></div>
+  </div>
+  <div class="foot">Monitoramento da Rede &bull; Atualiza sozinho a cada 5 minutos</div>
+</div>
+<script>
+// >>> TROQUE AQUI PELO LINK CSV PUBLICADO DA SUA PLANILHA <<<
+// Na planilha: Arquivo > Compartilhar > Publicar na Web > aba Dashboard > CSV > Publicar > copie o link
+// Exemplo: https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=XXXX&single=true&output=csv
+const CSV_URL = "COLE_AQUI_O_LINK_CSV_PUBLICADO_DA_ABA_DASHBOARD";
+
+function encurtarTipo(t){ t=String(t).toUpperCase(); if(t.includes('SERVIDOR')) return 'SERV'; if(t==='PC'||t.includes('PC')) return 'PC'; return t; }
+function parseCSV(text){
+  const linhas = text.trim().split(/\r?\n/).slice(1).filter(l=>l.trim());
+  return linhas.map(l=>{
+    // CSV simples: Tipo,Nome,IP,Status (sem virgulas dentro dos campos)
+    const p = l.split(',').map(s=>s.replace(/^"|"$/g,'').trim());
+    return {tipo:p[0]||'', nome:p[1]||'', ip:p[2]||'', status:p[3]||''};
+  }).filter(d=>d.nome);
+}
+async function carregar(){
+  try{
+    const res = await fetch(CSV_URL + (CSV_URL.includes('?') ? '&' : '?') + 't=' + Date.now());
+    const text = await res.text();
+    const dados = parseCSV(text);
+    const total = dados.length;
+    const online = dados.filter(d=>d.status.toUpperCase().includes('ONLINE') && !d.status.toUpperCase().includes('OFF')).length;
+    const offline = dados.filter(d=>d.status.toUpperCase().includes('OFFLINE')).length;
+    const disp = total ? Math.round(online/total*100) : 0;
+    document.getElementById('total').textContent = total;
+    document.getElementById('online').textContent = online;
+    document.getElementById('offline').textContent = offline;
+    document.getElementById('disp').textContent = disp + '%';
+    document.getElementById('dispTxt').textContent = online + ' de ' + total + ' servidores';
+    document.getElementById('ultima').textContent = new Date().toLocaleString('pt-BR');
+    document.getElementById('sub').textContent = total + ' servidores • 4 colunas';
+    const badge = document.getElementById('badgeTop');
+    if(offline>0){ badge.textContent = '● ' + offline + ' OFFLINE'; badge.classList.add('red'); }
+    else { badge.textContent = '● TUDO ONLINE'; badge.classList.remove('red'); }
+    let html = '<table><thead><tr><th class="col-tipo">Tipo</th><th>Nome</th><th class="col-ip">IP</th><th>Status</th></tr></thead><tbody>';
+    dados.forEach(d=>{
+      const s = d.status.toUpperCase();
+      let cls='pill', txt='ONLINE';
+      if(s.includes('OFFLINE')){ cls+=' red'; txt='OFFLINE'; }
+      else if(s.includes('LENTO')){ cls+=' yellow'; txt='LENTO'; }
+      html += '<tr><td class="col-tipo">'+encurtarTipo(d.tipo)+'</td><td class="nome">'+d.nome+'</td><td class="col-ip">'+d.ip+'</td><td><span class="'+cls+'"><span class="dot"></span>'+txt+'</span></td></tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('tabela').innerHTML = html;
+  }catch(e){
+    document.getElementById('tabela').innerHTML = '<div class="loading">Erro ao carregar. Verifique o CSV_URL no código. Detalhe: '+e+'</div>';
+  }
+}
+carregar();
+setInterval(carregar, 300000);
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js'); }
+</script>
+</body>
+</html>
